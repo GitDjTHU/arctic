@@ -25,6 +25,7 @@ _APPEND_COUNT = 60  # 1 hour of 1 min data
 
 
 def _promote_struct_dtypes(dtype1, dtype2):
+
     if not set(dtype1.names).issuperset(set(dtype2.names)):
         raise Exception("Removing columns from dtype not handled")
 
@@ -33,18 +34,26 @@ def _promote_struct_dtypes(dtype1, dtype2):
             return type1
         if type1.shape is not None:
             if not type1.shape == type2.shape:
-                raise Exception("We do not handle changes to dtypes that have shape")
+                raise Exception(
+                    "We do not handle changes to dtypes that have shape")
             return np.promote_types(type1.base, type2.base), type1.shape
         return np.promote_types(type1, type2)
-    return np.dtype([(n, _promote(dtype1.fields[n][0], dtype2.fields.get(n, (None,))[0])) for n in dtype1.names])
+
+    return np.dtype(
+        [(n, _promote(dtype1.fields[n][0], dtype2.fields.get(n, (None,))[0]))
+         for n in dtype1.names]
+    )
 
 
 def _attempt_update_unchanged(symbol, unchanged_segment_ids, collection, version, previous_version):
+
     if not unchanged_segment_ids or not collection or not version:
         return
 
-    # Currently it is called only from _concat_and_rewrite, with "base_version_id" always empty
-    # Use version_base_or_id() instead, to make the method safe going forward, called form anywhere
+    # Currently, it is called only from `_concat_and_rewrite`, with
+    # "base_version_id" always empty.
+    # Use `version_base_or_id()` instead, to make the method safe going
+    # forward, called form anywhere
     parent_id = version_base_or_id(version)
 
     # Update the parent set of the unchanged/compressed segments
@@ -59,39 +68,52 @@ def _attempt_update_unchanged(symbol, unchanged_segment_ids, collection, version
     # Fast check for success without extra query
     if result.matched_count == len(unchanged_segment_ids):
         return
-    # update_many is tricky sometimes wrt matched_count across replicas when balancer runs. Check based on _id.
+    # update_many is tricky sometimes wrt matched_count across replicas when
+    # balancer runs. Check based on _id.
     unchanged_ids = set([x['_id'] for x in unchanged_segment_ids])
     spec = {'symbol': symbol,
             'parent': parent_id,
             'segment': {'$lte': unchanged_segment_ids[-1]['segment']}}
     matched_segments_ids = set([x['_id'] for x in collection.find(spec)])
+
     if unchanged_ids != matched_segments_ids:
-        logger.error("Mismatched unchanged segments for {}: {} != {} (query spec={})".format(
-            symbol, unchanged_ids, matched_segments_ids, spec))
-        raise DataIntegrityException("Symbol: {}:{} update_many updated {} segments instead of {}".format(
-            symbol, previous_version['version'], result.matched_count, len(unchanged_segment_ids)))
+        logger.error(
+            "Mismatched unchanged segments for "
+            "{}: {} != {} (query spec={})".format(
+            symbol, unchanged_ids, matched_segments_ids, spec)
+        )
+
+        raise DataIntegrityException(
+            "Symbol: {}:{} update_many updated {} segments "
+            "instead of {}".format(
+                symbol, previous_version['version'],
+                result.matched_count, len(unchanged_segment_ids))
+        )
 
 
 def _resize_with_dtype(arr, dtype):
     """
-    This function will transform arr into an array with the same type as dtype. It will do this by
-    filling new columns with zeros (or NaNs, if it is a float column). Also, columns that are not
-    in the new dtype will be dropped.
+    This function will transform arr into an array with the same type as dtype.
+    It will do this by filling new columns with zeros
+    (or NaNs, if it is a float column). Also, columns that are not in the new
+    dtype will be dropped.
     """
     structured_arrays = dtype.names is not None and arr.dtype.names is not None
     old_columns = arr.dtype.names or []
     new_columns = dtype.names or []
 
-    # In numpy 1.9 the ndarray.astype method used to handle changes in number of fields. The code below
-    # should replicate the same behaviour the old astype used to have.
+    # In numpy 1.9 the ndarray.astype method used to handle changes in number
+    # of fields. The code below should replicate the same behaviour the old
+    # astype used to have.
     #
-    # One may be tempted to use np.lib.recfunctions.stack_arrays to implement both this step and the
-    # concatenate that follows but it 2x slower and it requires providing your own default values (instead
-    # of np.zeros).
+    # One may be tempted to use `np.lib.recfunctions.stack_arrays` to implement
+    # both this step and the concatenate that follows but it 2x slower and it
+    # requires providing your own default values (instead of np.zeros).
     #
-    # Numpy 1.14 supports doing new_arr[old_columns] = arr[old_columns], which is faster than the code below
-    # (in benchmarks it seems to be even slightly faster than using the old astype). However, that is not
-    # supported by numpy 1.9.2.
+    # Numpy 1.14 supports doing new_arr[old_columns] = arr[old_columns], which
+    # is faster than the code below (in benchmarks it seems to be even slightly
+    # faster than using the old astype). However, that is not supported by
+    # numpy 1.9.2.
     if structured_arrays and (old_columns != new_columns):
         old_columns = set(old_columns)
         new_columns = set(new_columns)
@@ -118,11 +140,21 @@ def set_corruption_check_on_append(enable):
     CHECK_CORRUPTION_ON_APPEND = bool(enable)
 
 
-def _update_fw_pointers(collection, symbol, version, previous_version, is_append, shas_to_add=None):
+def _update_fw_pointers(
+    collection,
+    symbol,
+    version,
+    previous_version,
+    is_append,
+    shas_to_add=None
+):
     """
-    This function will decide whether to update the version document with forward pointers to segments.
-    It detects cases where no prior writes/appends have been performed with FW pointers, and extracts the segment IDs.
-    It also sets the metadata which indicate the mode of operation at the time of the version creation.
+    This function will decide whether to update the version document with
+    forward pointers to segments.
+    It detects cases where no prior writes/appends have been performed with FW
+    pointers, and extracts the segment IDs.
+    It also sets the metadata which indicate the mode of operation at the time
+    of the version creation.
     """
     version[FW_POINTERS_CONFIG_KEY] = ARCTIC_FORWARD_POINTERS_CFG.name  # get the str as enum is not BSON serializable
 
@@ -132,7 +164,8 @@ def _update_fw_pointers(collection, symbol, version, previous_version, is_append
     version_shas = set()
 
     if is_append:
-        # Appends are tricky, as we extract the SHAs from the previous version (assuming it has FW pointers info)
+        # Appends are tricky, as we extract the SHAs from the previous version
+        # (assuming it has FW pointers info)
         prev_fw_cfg = get_fwptr_config(previous_version)
         if prev_fw_cfg is FwPointersCfg.DISABLED.name:
             version_shas.update(Binary(sha) for sha in collection.find(
@@ -143,31 +176,44 @@ def _update_fw_pointers(collection, symbol, version, previous_version, is_append
         else:
             version_shas.update(previous_version[FW_POINTERS_REFS_KEY])
 
-    # It is a write (we always get the all-inclusive set of SHAs), so no need to obtain previous SHAs
+    # It is a write (we always get the all-inclusive set of SHAs), so no need
+    # to obtain previous SHAs
     version_shas.update(shas_to_add)
 
     # Verify here the number of seen segments vs expected ones
     if len(version_shas) != version['segment_count']:
-        raise pymongo.errors.OperationFailure("Mismatched number of forward pointers to segments for {}: {} != {})"
-                                              "Is append: {}. Previous version: {}. "
-                                              "Gathered forward pointers segment shas: {}.".format(
-            symbol, len(version_shas), version['segment_count'], is_append, previous_version['_id'], version_shas))
+        raise pymongo.errors.OperationFailure(
+            "Mismatched number of forward pointers to segments for "
+            "{}: {} != {}) Is append: {}. Previous version: {}. "
+            "Gathered forward pointers segment shas: {}.".format(
+                symbol, len(version_shas), version['segment_count'],
+                is_append, previous_version['_id'], version_shas
+            )
+        )
 
     version[FW_POINTERS_REFS_KEY] = list(version_shas)
 
 
 def _spec_fw_pointers_aware(symbol, version, from_index=None, to_index=None):
     """
-    This method updates the find query filter spec used to read the segment for a version.
-    It chooses whether to query via forward pointers or not based on the version details and current mode of operation.
+    This method updates the find query filter spec used to read the segment
+    for a version.
+    It chooses whether to query via forward pointers or not based on the
+    version details and current mode of operation.
     """
-    spec = {'symbol': symbol,
-            'segment': {'$lt': version['up_to'] if to_index is None else to_index}}
+    spec = {
+        'symbol': symbol,
+        'segment': {'$lt': version['up_to'] if to_index is None else to_index}
+    }
     if from_index is not None:
         spec['segment']['$gte'] = from_index
 
-    # Version was written with an older arctic, not FW-pointers aware, or written with FW pointers disabled
-    if FW_POINTERS_CONFIG_KEY not in version or version[FW_POINTERS_CONFIG_KEY] == FwPointersCfg.DISABLED.name:
+    # Version was written with an older arctic, not FW-pointers aware, or
+    # written with FW pointers disabled
+    if (
+        FW_POINTERS_CONFIG_KEY not in version or
+        version[FW_POINTERS_CONFIG_KEY] == FwPointersCfg.DISABLED.name
+    ):
         spec['parent'] = version_base_or_id(version)
         return spec
 
@@ -180,7 +226,8 @@ def _spec_fw_pointers_aware(symbol, version, from_index=None, to_index=None):
         spec['sha'] = {'$in': version[FW_POINTERS_REFS_KEY]}
         return spec
 
-    # Version was created both with fw and legacy pointers, choose based on module configuration
+    # Version was created both with fw and legacy pointers, choose based on
+    # module configuration
     if v_fw_config is FwPointersCfg.HYBRID:
         if ARCTIC_FORWARD_POINTERS_CFG is FwPointersCfg.DISABLED:
             spec['parent'] = version_base_or_id(version)
@@ -191,27 +238,33 @@ def _spec_fw_pointers_aware(symbol, version, from_index=None, to_index=None):
         return spec
 
     # The code below shouldn't really be reached.
-    raise DataIntegrityException("Unhandled FW pointers configuration ({}: {}/{}/{})".format(
-        version.get('symbol'), version.get('_id'), version.get('version'), v_fw_config))
+    raise DataIntegrityException(
+        "Unhandled FW pointers configuration ({}: {}/{}/{})".format(
+            version.get('symbol'), version.get('_id'), version.get('version'),
+            v_fw_config)
+    )
 
 
 def _fw_pointers_convert_append_to_write(previous_version):
     """
-    This method decides whether to convert an append to a full write  in order to avoid data integrity errors
+    This method decides whether to convert an append to a full write in order
+    to avoid data integrity errors
     """
-    # Switching from ENABLED --> DISABLED/HYBRID when appending can cause integrity errors for subsequent reads:
+    # Switching from ENABLED --> DISABLED/HYBRID when appending can cause
+    # integrity errors for subsequent reads:
     #   - Assume the last write was done with ENABLED (segments don't have parent references updated).
     #   - Subsequent appends were done in DISABLED/HYBRID (append segments have parent references).
     #   - Reading with DISABLED won't "see" the first write's segments.
     prev_fw_config = get_fwptr_config(previous_version)
     # Convert to a full-write, which force-updates all segments with parent references.
-    return prev_fw_config is FwPointersCfg.ENABLED and ARCTIC_FORWARD_POINTERS_CFG is not FwPointersCfg.ENABLED
+    return (prev_fw_config is FwPointersCfg.ENABLED and
+            ARCTIC_FORWARD_POINTERS_CFG is not FwPointersCfg.ENABLED)
 
 
 class NdarrayStore(object):
-    """Chunked store for arbitrary ndarrays, supporting append.
+    """Chunked store for arbitrary np.ndarray, supporting append.
 
-    for the simple example:
+    For the simple example:
     dat = np.empty(10)
     library.write('test', dat) #version 1
     library.append('test', dat) #version 2
@@ -219,33 +272,35 @@ class NdarrayStore(object):
     version documents:
 
     [
-     {u'_id': ObjectId('55fa9a7781f12654382e58b8'),
-      u'symbol': u'test',
-      u'version': 1
-      u'type': u'ndarray',
-      u'up_to': 10,  # no. of rows included in the data for this version
-      u'append_count': 0,
-      u'append_size': 0,
-      u'dtype': u'float64',
-      u'dtype_metadata': {},
-      u'segment_count': 1, #only 1 segment included in this version
-      u'sha': Binary('.........', 0),
-      u'shape': [-1],
+      {
+        u'_id': ObjectId('55fa9a7781f12654382e58b8'),
+        u'symbol': u'test',
+        u'version': 1
+        u'type': u'ndarray',
+        u'up_to': 10,  # no. of rows included in the data for this version
+        u'append_count': 0,
+        u'append_size': 0,
+        u'dtype': u'float64',
+        u'dtype_metadata': {},
+        u'segment_count': 1, #only 1 segment included in this version
+        u'sha': Binary('.........', 0),
+        u'shape': [-1],
       },
 
-     {u'_id': ObjectId('55fa9aa981f12654382e58ba'),
-      u'symbol': u'test',
-      u'version': 2
-      u'type': u'ndarray',
-      u'up_to': 20, # no. of rows included in the data for this version
-      u'append_count': 1, # 1 append operation so far
-      u'append_size': 80, # 80 bytes appended
-      u'base_version_id': ObjectId('55fa9a7781f12654382e58b8'), # _id of version 1
-      u'dtype': u'float64',
-      u'dtype_metadata': {},
-      u'segment_count': 2, #2 segments included in this version
+      {
+        u'_id': ObjectId('55fa9aa981f12654382e58ba'),
+        u'symbol': u'test',
+        u'version': 2
+        u'type': u'ndarray',
+        u'up_to': 20, # no. of rows included in the data for this version
+        u'append_count': 1, # 1 append operation so far
+        u'append_size': 80, # 80 bytes appended
+        u'base_version_id': ObjectId('55fa9a7781f12654382e58b8'), # _id of version 1
+        u'dtype': u'float64',
+        u'dtype_metadata': {},
+        u'segment_count': 2, #2 segments included in this version
       }
-      ]
+    ]
 
 
     segment documents:
@@ -352,8 +407,8 @@ class NdarrayStore(object):
 
     def _do_read(self, collection, version, symbol, index_range=None):
         """
-        index_range is a 2-tuple of integers - a [from, to) range of segments to be read.
-            Either from or to can be None, indicating no bound.
+        index_range is a 2-tuple of integers - a [from, to) range of segments
+        to be read. Either from or to can be None, indicating no bound.
         """
         from_index = index_range[0] if index_range else None
         to_index = version['up_to']
@@ -365,13 +420,21 @@ class NdarrayStore(object):
 
         data = bytearray()
         i = -1
-        for i, x in enumerate(sorted(collection.find(spec), key=itemgetter('segment'))):
-            data.extend(decompress(x['data']) if x['compressed'] else x['data'])
+        for i, x in enumerate(
+                sorted(collection.find(spec), key=itemgetter('segment'))):
+
+            data.extend(
+                decompress(x['data']) if x['compressed'] else x['data']
+            )
 
         # Check that the correct number of segments has been returned
         if segment_count is not None and i + 1 != segment_count:
-            raise OperationFailure("Incorrect number of segments returned for {}:{}.  Expected: {}, but got {}. {}".format(
-                                   symbol, version['version'], segment_count, i + 1, collection.database.name + '.' + collection.name))
+            raise OperationFailure(
+                "Incorrect number of segments returned for {}:{}. "
+                "Expected: {}, but got {}. {}".format(
+                    symbol, version['version'], segment_count, i + 1,
+                    collection.database.name + '.' + collection.name)
+            )
 
         dtype = self._dtype(version['dtype'], version.get('dtype_metadata', {}))
         rtn = np.frombuffer(data, dtype=dtype).reshape(version.get('shape', (-1)))
@@ -568,7 +631,8 @@ class NdarrayStore(object):
 
     @staticmethod
     def check_written(collection, symbol, version):
-        # Currently only called from methods which guarantee 'base_version_id' is not populated.
+        # Currently, only called from methods which guarantee
+        # 'base_version_id' is not populated.
         # Make it nonetheless safe for the general case.
         parent_id = version_base_or_id(version)
 
@@ -681,10 +745,13 @@ class NdarrayStore(object):
             else:
                 version_shas.add(sha)
 
-                # We only keep for the records the ID of the version which created the segment.
-                # We also need the uniqueness of the parent field for the (symbol, parent, segment) index,
-                # because upon mongo_retry "dirty_append == True", we compress and only the SHA changes
-                # which raises DuplicateKeyError if we don't have a unique (symbol, parent, segment).
+                # We only keep for the records the ID of the version which
+                # created the segment.
+                # We also need the uniqueness of the parent field for the
+                # (symbol, parent, segment) index, because upon `mongo_retry`
+                # "dirty_append == True", we compress and only the SHA changes,
+                # which raises DuplicateKeyError if we don't have a unique
+                # (symbol, parent, segment).
                 set_spec = {'$addToSet': {'parent': version['_id']}}
 
                 if sha not in symbol_all_previous_shas:
@@ -693,10 +760,12 @@ class NdarrayStore(object):
                     bulk.append(pymongo.UpdateOne(segment_spec, set_spec, upsert=True))
                 elif ARCTIC_FORWARD_POINTERS_CFG is FwPointersCfg.HYBRID:
                     bulk.append(pymongo.UpdateOne(segment_spec, set_spec))
-                # With FwPointersCfg.ENABLED  we make zero updates on existing segment documents, but:
+                # With FwPointersCfg.ENABLED  we make zero updates on existing
+                # segment documents, but:
                 #   - write only the new segment(s) documents
                 #   - write the new version document
-                # This helps with performance as we update as less documents as necessary
+                # This helps with performance as we update as fewer documents
+                # as necessary.
 
         if bulk:
             try:
@@ -719,7 +788,7 @@ class NdarrayStore(object):
 
     def _segment_index(self, new_data, existing_index, start, new_segments):
         """
-        Generate a segment index which can be used in subselect data in _index_range.
+        Generate a segment index which can be used in sub-select data in _index_range.
         This function must handle both generation of the index and appending to an existing index
 
         Parameters:
@@ -727,9 +796,10 @@ class NdarrayStore(object):
         new_data: new data being written (or appended)
         existing_index: index field from the versions document of the previous version
         start: first (0-based) offset of the new data
-        segments: list of offsets. Each offset is the row index of the
-                  the last row of a particular chunk relative to the start of the _original_ item.
-                  array(new_data) - segments = array(offsets in item)
+        segments: list of offsets. Each offset is the row index of the last
+            row of a particular chunk relative to the start of the _original_
+            item.
+            array(new_data) - segments = array(offsets in item)
 
         Returns:
         --------

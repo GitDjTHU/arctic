@@ -33,11 +33,13 @@ class PandasStore(NdarrayStore):
         Parameters:
         -----------
         new_data: new data being written (or appended)
-        existing_index: index field from the versions document of the previous version
+        existing_index: index field from the versions document of the previous
+            version
         start: first (0-based) offset of the new data
-        segments: list of offsets. Each offset is the row index of the
-                  the last row of a particular chunk relative to the start of the _original_ item.
-                  array(new_data) - segments = array(offsets in item)
+        segments: list of offsets. Each offset is the row index of the last
+            row of a particular chunk relative to the start of the _original_
+            item.
+            array(new_data) - segments = array(offsets in item)
 
         Returns:
         --------
@@ -54,7 +56,7 @@ class PandasStore(NdarrayStore):
             index = np.core.records.fromarrays([last_rows[idx_col]] + [new_segments, ], dtype=INDEX_DTYPE)
             # append to existing index if exists
             if existing_index:
-                # existing_index_arr is read-only but it's never written to
+                # existing_index_arr is read-only, but it's never written to
                 existing_index_arr = np.frombuffer(decompress(existing_index), dtype=INDEX_DTYPE)
                 if start > 0:
                     existing_index_arr = existing_index_arr[existing_index_arr['index'] < start]
@@ -64,7 +66,8 @@ class PandasStore(NdarrayStore):
             raise ArcticException("Could not find datetime64 index in item but existing data contains one")
         return None
 
-    def _datetime64_index(self, recarr):
+    @staticmethod
+    def _datetime64_index(recarr):
         """ Given a np.recarray find the first datetime64 column """
         # TODO: Handle multi-indexes
         names = recarr.dtype.names
@@ -95,8 +98,10 @@ class PandasStore(NdarrayStore):
         return super(PandasStore, self)._index_range(version, symbol, **kwargs)
 
     def _daterange(self, recarr, date_range):
-        """ Given a recarr, slice out the given artic.date.DateRange if a
-        datetime64 index exists """
+        """
+        Given a recarr, slice out the given arctic.date.DateRange if a
+        datetime64 index exists.
+        """
         idx = self._datetime64_index(recarr)
         if idx and len(recarr):
             dts = recarr[idx]
@@ -127,8 +132,8 @@ class PandasStore(NdarrayStore):
 
 def _start_end(date_range, dts):
     """
-    Return tuple: [start, end] of np.datetime64 dates that are inclusive of the passed
-    in datetimes.
+    Return tuple: [start, end] of np.datetime64 dates that are inclusive of
+    the passed in datetimes.
     """
     # FIXME: timezones
     assert len(dts)
