@@ -93,7 +93,7 @@ def bench_multi(repeats, _strarr, use_HC, pool=None):
             if use_HC:
                 res = c.compressHC_array(_strarr)
             else:
-                res = c.compress_array(_strarr, withHC=False)
+                res = c.compress_array(_strarr, with_hc=False)
         sample = (dt.now() - now).total_seconds()
         assert len(res) == len(_strarr)
         assert all(res)

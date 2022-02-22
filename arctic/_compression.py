@@ -56,7 +56,7 @@ def set_compression_pool_size(pool_size):
     _compress_thread_pool = ThreadPool(pool_size)
 
 
-def compress_array(str_list, withHC=LZ4_HIGH_COMPRESSION):
+def compress_array(str_list, with_hc=LZ4_HIGH_COMPRESSION):
     """
     Compress an array of strings
 
@@ -64,7 +64,7 @@ def compress_array(str_list, withHC=LZ4_HIGH_COMPRESSION):
     ----------
         str_list: `list[str]`
             The input list of strings which need to be compressed.
-        withHC: `bool`
+        with_hc: `bool`
             This flag controls whether lz4HC will be used.
 
     Returns
@@ -77,12 +77,12 @@ def compress_array(str_list, withHC=LZ4_HIGH_COMPRESSION):
     if not str_list:
         return str_list
 
-    do_compress = lz4_compressHC if withHC else lz4_compress
+    do_compress = lz4_compressHC if with_hc else lz4_compress
 
     def can_parallelize_strlist(strlist):
         return len(strlist) > LZ4_N_PARALLEL and len(strlist[0]) > LZ4_MINSZ_PARALLEL
 
-    use_parallel = (ENABLE_PARALLEL and withHC) or can_parallelize_strlist(str_list)
+    use_parallel = (ENABLE_PARALLEL and with_hc) or can_parallelize_strlist(str_list)
 
     if BENCHMARK_MODE or use_parallel:
         if _compress_thread_pool is None:
@@ -113,7 +113,7 @@ def compressHC_array(str_list):
     """
     HC compression
     """
-    return compress_array(str_list, withHC=True)
+    return compress_array(str_list, with_hc=True)
 
 
 def decompress(_str):

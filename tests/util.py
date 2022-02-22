@@ -11,7 +11,7 @@ import dateutil
 import numpy as np
 import pandas
 from dateutil.rrule import rrule, DAILY
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 
 
 def assert_frame_equal_(df1, df2, check_freq=True, check_names=True):

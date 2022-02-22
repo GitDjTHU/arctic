@@ -58,8 +58,11 @@ def test_connection_passed_warning_raised():
         # Increment _pid to simulate forking the process
         store._pid += 1
         _ = store._conn
-        assert lg.mock_calls[0] == call.warn('Forking process. Arctic was passed a pymongo connection during init, '
-                                             'the new pymongo connection may have different parameters.')
+        assert lg.mock_calls[0] == call.warning(
+            'Forking process. '
+            'Arctic was passed a pymongo connection during init, '
+            'the new pymongo connection may have different parameters.'
+        )
 
 
 def test_arctic_auth():

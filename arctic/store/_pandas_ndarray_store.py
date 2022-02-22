@@ -162,26 +162,38 @@ class PandasSeriesStore(PandasStore):
         if self.can_write_type(data):
             # Series has always a single-column
             if data.dtype is NP_OBJECT_DTYPE or data.index.dtype is NP_OBJECT_DTYPE:
-                return self.SERIALIZER.can_convert_to_records_without_objects(data, symbol)
+                return self.SERIALIZER.can_convert_to_records_without_objects(
+                    data, symbol
+                )
             return True
         return False
 
     def write(self, arctic_lib, version, symbol, item, previous_version):
         item, md = self.SERIALIZER.serialize(item)
-        super(PandasSeriesStore, self).write(arctic_lib, version, symbol, item, previous_version, dtype=md)
+        super(PandasSeriesStore, self).write(
+            arctic_lib, version, symbol, item, previous_version, dtype=md)
 
-    def append(self, arctic_lib, version, symbol, item, previous_version, **kwargs):
+    def append(self, arctic_lib, version, symbol, item, previous_version,
+               **kwargs):
+
         item, md = self.SERIALIZER.serialize(item)
-        super(PandasSeriesStore, self).append(arctic_lib, version, symbol, item, previous_version, dtype=md, **kwargs)
+        super(PandasSeriesStore, self).append(
+            arctic_lib, version, symbol, item, previous_version, dtype=md,
+            **kwargs)
 
     def read_options(self):
         return super(PandasSeriesStore, self).read_options()
 
     def read(self, arctic_lib, version, symbol, **kwargs):
-        item = super(PandasSeriesStore, self).read(arctic_lib, version, symbol, **kwargs)
-        # Try to check if force_bytes_to_unicode is set in kwargs else use the config value (which defaults to False)
-        force_bytes_to_unicode = kwargs.get('force_bytes_to_unicode', FORCE_BYTES_TO_UNICODE)
-        return self.SERIALIZER.deserialize(item, force_bytes_to_unicode=force_bytes_to_unicode)
+        item = super(PandasSeriesStore, self).read(
+            arctic_lib, version, symbol, **kwargs)
+        # Try to check if force_bytes_to_unicode is set in kwargs else use the
+        # config value (which defaults to False).
+        force_bytes_to_unicode = kwargs.get('force_bytes_to_unicode',
+                                            FORCE_BYTES_TO_UNICODE)
+        return self.SERIALIZER.deserialize(
+            item, force_bytes_to_unicode=force_bytes_to_unicode
+        )
 
 
 class PandasDataFrameStore(PandasStore):
@@ -194,24 +206,36 @@ class PandasDataFrameStore(PandasStore):
 
     def can_write(self, version, symbol, data):
         if self.can_write_type(data):
-            if NP_OBJECT_DTYPE in data.dtypes.values or data.index.dtype is NP_OBJECT_DTYPE:
-                return self.SERIALIZER.can_convert_to_records_without_objects(data, symbol)
+            if (NP_OBJECT_DTYPE in data.dtypes.values or
+                    data.index.dtype is NP_OBJECT_DTYPE):
+                return self.SERIALIZER.can_convert_to_records_without_objects(
+                    data, symbol
+                )
             return True
         return False
 
     def write(self, arctic_lib, version, symbol, item, previous_version):
         item, md = self.SERIALIZER.serialize(item)
-        super(PandasDataFrameStore, self).write(arctic_lib, version, symbol, item, previous_version, dtype=md)
+        super(PandasDataFrameStore, self).write(
+            arctic_lib, version, symbol, item, previous_version, dtype=md)
 
-    def append(self, arctic_lib, version, symbol, item, previous_version, **kwargs):
+    def append(self, arctic_lib, version, symbol, item, previous_version,
+               **kwargs):
         item, md = self.SERIALIZER.serialize(item)
-        super(PandasDataFrameStore, self).append(arctic_lib, version, symbol, item, previous_version, dtype=md, **kwargs)
+        super(PandasDataFrameStore, self).append(
+            arctic_lib, version, symbol, item, previous_version, dtype=md,
+            **kwargs)
 
     def read(self, arctic_lib, version, symbol, **kwargs):
-        item = super(PandasDataFrameStore, self).read(arctic_lib, version, symbol, **kwargs)
-        # Try to check if force_bytes_to_unicode is set in kwargs else use the config value (which defaults to False)
-        force_bytes_to_unicode = kwargs.get('force_bytes_to_unicode', FORCE_BYTES_TO_UNICODE)
-        return self.SERIALIZER.deserialize(item, force_bytes_to_unicode=force_bytes_to_unicode)
+        item = super(PandasDataFrameStore, self).read(arctic_lib, version,
+                                                      symbol, **kwargs)
+        # Try to check if force_bytes_to_unicode is set in kwargs else use the
+        # config value (which defaults to False).
+        force_bytes_to_unicode = kwargs.get('force_bytes_to_unicode',
+                                            FORCE_BYTES_TO_UNICODE)
+        return self.SERIALIZER.deserialize(
+            item, force_bytes_to_unicode=force_bytes_to_unicode
+        )
 
     def read_options(self):
         return super(PandasDataFrameStore, self).read_options()
@@ -227,29 +251,36 @@ class PandasPanelStore(PandasDataFrameStore):
     def can_write(self, version, symbol, data):
         if self.can_write_type(data):
             frame = data.to_frame(filter_observations=False)
-            if NP_OBJECT_DTYPE in frame.dtypes.values or (hasattr(data, 'index') and data.index.dtype is NP_OBJECT_DTYPE):
-                return self.SERIALIZER.can_convert_to_records_without_objects(frame, symbol)
+            if NP_OBJECT_DTYPE in frame.dtypes.values or (
+                    hasattr(data, 'index') and
+                    data.index.dtype is NP_OBJECT_DTYPE):
+                return self.SERIALIZER.can_convert_to_records_without_objects(
+                    frame, symbol)
             return True
         return False
 
     def write(self, arctic_lib, version, symbol, item, previous_version):
         if np.product(item.shape) == 0:
-            # Currently not supporting zero size panels as they drop indices when converting to dataframes
+            # Currently, not supporting zero size panels as they drop indices
+            # when converting to DataFrames.
             # Plan is to find a better solution in due course.
-            raise ValueError('Cannot insert a zero size panel into mongo.')
+            raise ValueError('Cannot insert a zero size Panel into mongo.')
         if not np.all(len(i.names) == 1 for i in item.axes):
-            raise ValueError('Cannot insert panels with multiindexes')
+            raise ValueError('Cannot insert Panels with MultiIndexes')
         item = item.to_frame(filter_observations=False)
         if len(set(item.dtypes)) == 1:
-            # If all columns have the same dtype, we support non-string column names.
-            # We know from above check that columns is not a multiindex.
+            # If all columns have the same dtype, we support non-string column
+            # names.
+            # We know from above check that columns is not a MultiIndex.
             item = DataFrame(item.stack())
         elif item.columns.dtype != np.dtype('object'):
             raise ValueError('Cannot support non-object dtypes for columns')
-        super(PandasPanelStore, self).write(arctic_lib, version, symbol, item, previous_version)
+        super(PandasPanelStore, self).write(
+            arctic_lib, version, symbol, item, previous_version)
 
     def read(self, arctic_lib, version, symbol, **kwargs):
-        item = super(PandasPanelStore, self).read(arctic_lib, version, symbol, **kwargs)
+        item = super(PandasPanelStore, self).read(
+            arctic_lib, version, symbol, **kwargs)
         if len(item.index.names) == 3:
             return item.iloc[:, 0].unstack().to_panel()
         return item.to_panel()
@@ -257,5 +288,6 @@ class PandasPanelStore(PandasDataFrameStore):
     def read_options(self):
         return super(PandasPanelStore, self).read_options()
 
-    def append(self, arctic_lib, version, symbol, item, previous_version, **kwargs):
+    def append(self, arctic_lib, version, symbol, item, previous_version,
+               **kwargs):
         raise ValueError('Appending not supported for pandas.Panel')

@@ -78,12 +78,13 @@ class PickleStore(object):
         return []
 
     def write(self, arctic_lib, version, symbol, item, _previous_version):
-        # Currently we try to bson encode if the data is less than a given size and store it in
-        # the version collection, but pickling might be preferable if we have characters that don't
-        # play well with the bson encoder or if you always want your data in the data collection.
+        # Currently, we try to bson encode if the data is less than a given
+        # size and store it in the version collection, but pickling might be
+        # preferable if we have characters that don't play well with the bson
+        # encoder or if you always want your data in the data collection.
         if not SKIP_BSON_ENCODE_PICKLE_STORE:
             try:
-                # If it's encodeable, then ship it
+                # If it's encode-able, then ship it.
                 b = bson.BSON.encode({'data': item})
                 if len(b) < min(MAX_BSON_ENCODE, _HARD_MAX_BSON_ENCODE):
                     version['data'] = item
@@ -93,21 +94,29 @@ class PickleStore(object):
 
         # Pickle, chunk and store the data
         collection = arctic_lib.get_top_level_collection()
-        # Try to pickle it. This is best effort
+        # Try to pickle it. This is the best effort.
         version['blob'] = _MAGIC_CHUNKEDV2
-        # Python 3.8 onwards uses protocol 5 which cannot be unpickled in Python versions below that, so limiting
-        # it to use a maximum of protocol 4 in Python which is understood by 3.4 onwards and is still fairly efficient.
-        # The min() allows lower versions to be used in py2 (which supports a max of 2)
+        # Python 3.8 onwards uses protocol 5 which cannot be unpickled in
+        # Python versions below that, so limiting it to use a maximum of
+        # protocol 4 in Python which is understood by 3.4 onwards and is still
+        # fairly efficient.
+        # The min() allows lower versions to be used in py2 (which supports a
+        # max of 2)
         pickle_protocol = min(cPickle.HIGHEST_PROTOCOL, 4)
         pickled = cPickle.dumps(item, protocol=pickle_protocol)
 
-        data = compress_array([pickled[i * _CHUNK_SIZE: (i + 1) * _CHUNK_SIZE] for i in xrange(int(len(pickled) / _CHUNK_SIZE + 1))])
+        data = compress_array(
+            [pickled[i * _CHUNK_SIZE: (i + 1) * _CHUNK_SIZE]
+             for i in xrange(int(len(pickled) / _CHUNK_SIZE + 1))]
+        )
 
         for seg, d in enumerate(data):
             segment = {'data': Binary(d)}
             segment['segment'] = seg
             seg += 1
             sha = checksum(symbol, segment)
-            collection.update_one({'symbol': symbol, 'sha': sha},
-                                  {'$set': segment, '$addToSet': {'parent': version['_id']}},
-                                  upsert=True)
+            collection.update_one(
+                {'symbol': symbol, 'sha': sha},
+                {'$set': segment, '$addToSet': {'parent': version['_id']}},
+                upsert=True
+            )

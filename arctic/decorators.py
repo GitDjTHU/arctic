@@ -3,8 +3,13 @@ import sys
 from functools import wraps
 from time import sleep
 
-from pymongo.errors import (AutoReconnect, OperationFailure, DuplicateKeyError, ServerSelectionTimeoutError,
-                            BulkWriteError)
+from pymongo.errors import (
+    AutoReconnect,
+    OperationFailure,
+    DuplicateKeyError,
+    ServerSelectionTimeoutError,
+    BulkWriteError
+)
 
 from .hooks import log_exception as _log_exception
 
@@ -20,10 +25,14 @@ def _get_host(store):
             if isinstance(store, (list, tuple)):
                 store = store[0]
             ret['l'] = store._arctic_lib.get_name()
-            ret['mnodes'] = ["{}:{}".format(h, p) for h, p in store._collection.database.client.nodes]
+            ret['mnodes'] = [
+                "{}:{}".format(h, p)
+                for h, p in store._collection.database.client.nodes
+            ]
             ret['mhost'] = "{}".format(store._arctic_lib.arctic.mongo_host)
         except Exception:
-            # Sometimes get_name(), for example, fails if we're not connected to MongoDB.
+            # Sometimes get_name(), for example, fails if we're not connected
+            # to MongoDB.
             pass
     return ret
 
@@ -48,7 +57,9 @@ def mongo_retry(f):
             while True:
                 try:
                     return f(*args, **kwargs)
-                except (DuplicateKeyError, ServerSelectionTimeoutError, BulkWriteError) as e:
+                except (DuplicateKeyError,
+                        ServerSelectionTimeoutError,
+                        BulkWriteError) as e:
                     # Re-raise errors that won't go away.
                     _handle_error(f, e, _retry_count, **_get_host(args))
                     raise
@@ -57,12 +68,15 @@ def mongo_retry(f):
                     _handle_error(f, e, _retry_count, **_get_host(args))
                 except Exception as e:
                     if log_all_exceptions:
-                        _log_exception(f.__name__, e, _retry_count, **_get_host(args))
+                        _log_exception(
+                            f.__name__, e, _retry_count, **_get_host(args)
+                        )
                     raise
         finally:
             if top_level:
                 _in_retry = False
                 _retry_count = 0
+
     return f_retry
 
 

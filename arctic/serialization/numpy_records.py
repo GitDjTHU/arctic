@@ -53,7 +53,7 @@ def _multi_index_to_records(index, empty_index):
     if not empty_index:
         ix_vals = list(map(np.array, [index.get_level_values(i) for i in range(index.nlevels)]))
     else:
-        # empty multi index has no size, create empty arrays for recarry.
+        # Empty MultiIndex has no size, create empty arrays for recarry.
         ix_vals = [np.array([]) for n in index.names]
     index_names = list(index.names)
     count = 0
@@ -62,7 +62,11 @@ def _multi_index_to_records(index, empty_index):
             index_names[i] = 'level_%d' % count
             count += 1
             log.info("Level in MultiIndex has no name, defaulting to %s" % index_names[i])
-    index_tz = [get_timezone(i.tz) if isinstance(i, DatetimeIndex) else None for i in index.levels]
+
+    index_tz = [i.tz if isinstance(i, DatetimeIndex) else None for i in index.levels]
+    if any(index_tz):
+        index_tz = [get_timezone(tz) for tz in index_tz if tz is not None]
+    # index_tz = [get_timezone(i.tz) if isinstance(i, DatetimeIndex) else None for i in index.levels]
     return ix_vals, index_names, index_tz
 
 
@@ -156,7 +160,7 @@ class PandasSerializer(object):
         # and setting rtn.dtype to dtype does not preserve the metadata
         # see https://github.com/numpy/numpy/issues/6771
 
-        return (rtn, dtype)
+        return rtn, dtype
 
     def fast_check_serializable(self, df):
         """
@@ -191,23 +195,31 @@ class PandasSerializer(object):
     def can_convert_to_records_without_objects(self, df, symbol):
         # We can't easily distinguish string columns from objects
         try:
-            # TODO: we can add here instead a check based on df size and enable fast-check if sz > threshold value
+            # TODO: we can add here instead a check based on df size and enable
+            #  fast-check if sz > threshold value
             if FAST_CHECK_DF_SERIALIZABLE:
                 arr, _ = self.fast_check_serializable(df)
             else:
                 arr, _ = self._to_records(df)
         except Exception as e:
-            # This exception will also occur when we try to write the object so we fall-back to saving using Pickle
-            log.warning('Pandas dataframe %s caused exception "%s" when attempting to convert to records. '
-                        'Saving as Blob.' % (symbol, repr(e)))
+            # This exception will also occur when we try to write the object,
+            # so we fall back to save using Pickle.
+            log.warning(
+                'Pandas dataframe %s caused exception "%s" when attempting to '
+                'convert to records. Saving as Blob.' % (symbol, repr(e))
+            )
             return False
         else:
             if arr.dtype.hasobject:
-                log.warning('Pandas dataframe %s contains Objects, saving as Blob' % symbol)
+                log.warning(
+                    'Pandas dataframe %s contains Objects, '
+                    'saving as Blob' % symbol)
                 # Fall-back to saving using Pickle
                 return False
             elif any([len(x[0].shape) for x in arr.dtype.fields.values()]):
-                log.warning('Pandas dataframe %s contains >1 dimensional arrays, saving as Blob' % symbol)
+                log.warning(
+                    'Pandas dataframe %s contains >1 dimensional arrays, '
+                    'saving as Blob' % symbol)
                 return False
             else:
                 return True

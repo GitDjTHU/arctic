@@ -31,7 +31,7 @@ some_object = {'thing': sentinel.val}
         [True, False], [some_object, ts], [FwPointersCfg.DISABLED, FwPointersCfg.HYBRID, FwPointersCfg.ENABLED])])
 def test_cleanup_orphaned_chunks(mongo_host, library, data, dry_run, fw_pointers_config):
     """
-    Check that we do / don't cleanup chunks based on the dry-run
+    Check that we do / don't clean up chunks based on the dry-run
     """
     with FwPointersCtx(fw_pointers_config):
         yesterday = dt.utcnow() - dtd(days=1, seconds=1)

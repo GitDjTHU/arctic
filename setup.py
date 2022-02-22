@@ -23,7 +23,7 @@ from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-long_description_content_type='text/markdown'
+long_description_content_type = 'text/markdown'
 long_description = open('README.md').read()
 changelog = open('CHANGES.md').read()
 
@@ -72,26 +72,27 @@ setup(
     cmdclass={'test': PyTest},
     setup_requires=["six",
                     # "numpy<=1.18.4",
-                    "numpy"
+                    "numpy",
                     "setuptools-git",
-                   ],
+                    ],
     install_requires=["decorator",
                       "enum-compat",
-                      #"enum34",
+                      # "enum34",
                       "mock",
                       "mockextras",
-                    #   "pandas<=1.0.3",
-                      "pandas"
-                    #   "numpy<=1.18.4",
-                      "numpy"
-                      "pymongo>=3.6.0, <= 3.11.0",
-                      #"pytest-server-fixtures", # must be manual
+                      #   "pandas<=1.0.3",
+                      "pandas",
+                      #   "numpy<=1.18.4",
+                      "numpy",
+                      # "pymongo>=3.6.0, <= 3.11.0",
+                      "pymongo",
+                      # "pytest-server-fixtures", # must be manual
                       "pytest-cov",
                       "pytest",
                       "pytz",
                       "tzlocal",
                       "lz4",
-                     ],
+                      ],
     # Note: pytest >= 4.1.0 is not compatible with pytest-cov < 2.6.1.
     # deprecated
     tests_require=["mock",
@@ -102,18 +103,18 @@ setup(
                    "pytest-timeout",
                    "pytest-xdist<=1.26.1",
                    "lz4"
-                  ],
+                   ],
     entry_points={'console_scripts': [
-                                        'arctic_init_library = arctic.scripts.arctic_init_library:main',
-                                        'arctic_list_libraries = arctic.scripts.arctic_list_libraries:main',
-                                        'arctic_delete_library = arctic.scripts.arctic_delete_library:main',
-                                        'arctic_enable_sharding = arctic.scripts.arctic_enable_sharding:main',
-                                        'arctic_copy_data = arctic.scripts.arctic_copy_data:main',
-                                        'arctic_create_user = arctic.scripts.arctic_create_user:main',
-                                        'arctic_prune_versions = arctic.scripts.arctic_prune_versions:main',
-                                        'arctic_fsck = arctic.scripts.arctic_fsck:main',
-                                        ]
-                  },
+        'arctic_init_library = arctic.scripts.arctic_init_library:main',
+        'arctic_list_libraries = arctic.scripts.arctic_list_libraries:main',
+        'arctic_delete_library = arctic.scripts.arctic_delete_library:main',
+        'arctic_enable_sharding = arctic.scripts.arctic_enable_sharding:main',
+        'arctic_copy_data = arctic.scripts.arctic_copy_data:main',
+        'arctic_create_user = arctic.scripts.arctic_create_user:main',
+        'arctic_prune_versions = arctic.scripts.arctic_prune_versions:main',
+        'arctic_fsck = arctic.scripts.arctic_fsck:main',
+    ]
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
