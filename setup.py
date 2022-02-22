@@ -71,7 +71,7 @@ setup(
     cmdclass={'test': PyTest},
     setup_requires=["numpy<=1.18.4",
                     "setuptools-git",
-                   ],
+                    ],
     install_requires=["decorator",
                       "enum-compat",
                       "mock",
@@ -82,7 +82,7 @@ setup(
                       "pytz",
                       "tzlocal",
                       "lz4",
-                     ],
+                      ],
     # Note: pytest >= 4.1.0 is not compatible with pytest-cov < 2.6.1.
     # deprecated
     tests_require=["mock",
@@ -94,7 +94,7 @@ setup(
                    "pytest-xdist<=1.26.1",
                    "tomli<2; python_version=='3.6'",
                    "lz4"
-                  ],
+                   ],
     entry_points={'console_scripts': [
                                         'arctic_init_library = arctic.scripts.arctic_init_library:main',
                                         'arctic_list_libraries = arctic.scripts.arctic_list_libraries:main',

@@ -23,9 +23,9 @@
   * Feature: #919 Add CircleCI badge to README.md
   * Feature: #917 Add CircleCI build
   * Bugfix:  #910 Fix column subsetting bug
-  * Bugfix:  #909 Speedup FrameToArray serialiser for ChunkStore by removing intermediate DataFrame construction
+  * Bugfix:  #909 Speedup FrameToArray serializer for ChunkStore by removing intermediate DataFrame construction
   * Bugfix:  #902 Chunkstore-read-speedup
-  * Bugfix:  #872 Do not spam if not permissioned on cache db
+  * Bugfix:  #872 Do not spam if no permission on cache db
   * Bugfix:  #874 Pickle protocol 5 not supported in 3.7 and below
   * Bugfix:       Handle uninitialized cache object
   * Feature: #897 Pin numpy 1.18.4
@@ -34,7 +34,7 @@
   * Bugfix:  #875 Fix flake8 errors
 
 ### 1.79.4 (2020-12-01)
-  * Bugfix: Update code to work with latest version of pandas
+  * Bugfix: Update code to work with the latest version of pandas
   * Bugfix: Fix missing column handling in numpy serializer
 
 ### 1.79.3 (2019-12-6)
@@ -48,7 +48,7 @@
   * Bugfix: #777: Handle empty columns in dataframes
 
 ### 1.79.1 (2019-05-03)
-  * Bugfix: Pandas convert multiindexes to unicode if flag set.
+  * Bugfix: Pandas convert MultiIndexes to unicode if flag set.
 
 ### 1.79 (2019-05-02)
   * Bugfix: #765 Pandas data columns require encoding to convert to unicode.
@@ -95,7 +95,7 @@
   * Bugfix: #641 DateRange.intersection open/closed range fix
   * Feature: #493 Can pass kwargs when calling MongoClient, e.g. for ssl
   * Feature: #590 Faster write handler selection for DataFrames with objects  
-  * Feature: #604 Improved handling handling for pickling serialization decidions
+  * Feature: #604 Improved handling for pickling serialization decidions
 
 
 ### 1.69 (2018-09-12)
@@ -106,7 +106,7 @@
 ### 1.68 (2018-08-17)
   * Feature: #553 Compatibility with both the new and old LZ4 API
   * Feature: #571 Removed the Cython LZ4 code, use the latest python-lz4
-  * Feature: #557 Threadpool based compression. Speed imrpovement and tuning benchmarks.
+  * Feature: #557 Threadpool based compression. Speed improvement and tuning benchmarks.
   * Bugfix: fix tickstore unicode handling, support both unicode and utf-8 arrays
   * Bugfix: #591 Fix tickstore reads not returning index with localized timezone
   * Feature: #595 add host attribute to VersionedItem.
@@ -170,7 +170,7 @@
   * Bugfix:  #439 fix cursor timeouts in chunkstore iterator
   * Bugfix:  #450 fix error in chunkstore delete when chunk range produces empty df
   * Bugfix:  #442 fix incorrect segment values in multi segment chunks in chunkstore
-  * Feature: #457 enchances fix for #442 via segment_id_repair tool
+  * Feature: #457 enhances fix for #442 via segment_id_repair tool
   * Bugfix:  #385 exceptions during quota statistics no longer kill a write
   * Feature: PR#161 TickStore.max_date now returns a datetime in the 'local' timezone
   * Feature: #425 user defined metadata for tickstore
@@ -231,7 +231,7 @@
   * Feature: #365 add generic BSON store
 
 ### 1.42 (2017-05-12)
-  * Bugfix: #346 fixed daterange subsetting error on very large dateframes in version store
+  * Bugfix: #346 fixed daterange subsetting error on very large DataFrames in version store
   * Bugfix: #351 $size queries can't use indexes, use alternative queries
 
 ### 1.41 (2017-04-20)
@@ -379,7 +379,7 @@
 
 ### 1.17 (2015-12-24)
 
-  * Feature: Add timezone suppport to store multi-index dataframes
+  * Feature: Add timezone support to store multi-index dataframes
   * Bugfix:  Fixed broken sdist releases
 
 ### 1.16 (2015-12-15)
