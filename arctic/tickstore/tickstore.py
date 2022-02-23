@@ -23,9 +23,17 @@ try:
 except ImportError:
     from pandas.lib import infer_dtype
 
-from ..date import DateRange, to_pandas_closed_closed, mktz, datetime_to_ms, ms_to_datetime, CLOSED_CLOSED, to_dt, utc_dt_to_local_dt
+from ..date import (
+    to_pandas_closed_closed, datetime_to_ms, ms_to_datetime,
+    utc_dt_to_local_dt, to_dt, mktz,
+    DateRange, CLOSED_CLOSED
+)
+
 from ..decorators import mongo_retry
-from ..exceptions import OverlappingDataException, NoDataFoundException, UnorderedDataException, UnhandledDtypeException, ArcticException
+from ..exceptions import (
+    OverlappingDataException, NoDataFoundException, UnorderedDataException,
+    UnhandledDtypeException, ArcticException
+)
 from .._util import indent
 
 try:
@@ -151,8 +159,7 @@ class TickStore(object):
         """
         Delete all chunks for a symbol.
 
-        Which are, for the moment, fully contained in the passed in
-        date_range.
+        Which are, for the moment, fully contained in the date_range.
 
         Parameters
         ----------
@@ -193,7 +200,7 @@ class TickStore(object):
             assert date_range.start.tzinfo
             start = date_range.start
 
-            # If all chunks start inside of the range, we default to capping to our
+            # If all chunks start inside the range, we default to capping to our
             # range so that we don't fetch any chunks from the beginning of time
             start_range['$gte'] = start
 
@@ -216,9 +223,15 @@ class TickStore(object):
             # when we've seen the first such chunk
             try:
                 for candidate in result:
-                    chunk = self._collection.find_one({'s': candidate['start'], 'sy': candidate['_id']}, {'e': 1})
-                    if chunk['e'].replace(tzinfo=mktz('UTC')) >= start:
-                        start_range['$gte'] = candidate['start'].replace(tzinfo=mktz('UTC'))
+                    chunk = self._collection.find_one(
+                        {'s': candidate['start'], 'sy': candidate['_id']},
+                        {'e': 1}
+                    )
+                    # if chunk['e'].replace(tzinfo=mktz('UTC')) >= start:
+                    #     start_range['$gte'] = candidate['start'].replace(tzinfo=mktz('UTC'))
+                    #     break
+                    if chunk['e'] >= start:
+                        start_range['$gte'] = candidate['start']
                         break
             except StopIteration:
                 pass
@@ -229,11 +242,10 @@ class TickStore(object):
             assert date_range.end.tzinfo
             last_dt = date_range.end
         else:
-            logger.info("No end provided.  Loading a month for: {}:{}".format(symbol, first_dt))
+            logger.info("No end provided. Loading a month for: {}:{}".format(symbol, first_dt))
             if not first_dt:
-                first_doc = self._collection.find_one(self._symbol_query(symbol),
-                                                      projection={START: 1, ID: 0},
-                                                      sort=[(START, pymongo.ASCENDING)])
+                first_doc = self._collection.find_one(
+                    self._symbol_query(symbol), projection={START: 1, ID: 0}, sort=[(START, pymongo.ASCENDING)])
                 if not first_doc:
                     raise NoDataFoundException()
 
@@ -257,16 +269,15 @@ class TickStore(object):
         return query
 
     def _read_preference(self, allow_secondary):
-        """ Return the mongo read preference given an 'allow_secondary' argument
-        """
+        """Return the mongo read preference given an 'allow_secondary' argument"""
         allow_secondary = self._allow_secondary if allow_secondary is None else allow_secondary
         return ReadPreference.NEAREST if allow_secondary else ReadPreference.PRIMARY
 
     def read(self, symbol, date_range=None, columns=None, include_images=False, allow_secondary=None,
              _target_tick_count=0):
         """
-        Read data for the named symbol.  Returns a VersionedItem object with
-        a data and metdata element (as passed into write).
+        Read data for the named symbol. Returns a VersionedItem object with a data and metdata element
+        (as passed into write).
 
         Parameters
         ----------
@@ -669,7 +680,8 @@ class TickStore(object):
             except:
                 raise UnhandledDtypeException("Only unicode and utf8 strings are supported.")
         else:
-            raise UnhandledDtypeException("Unsupported dtype '%s' - only int64, float64 and U are supported" % array.dtype)
+            raise UnhandledDtypeException("Unsupported dtype '%s' - only int64, "
+                                          "float64 and U are supported" % array.dtype)
         # Everything is little endian in tickstore
         if array.dtype.byteorder != '<':
             array = array.astype(array.dtype.newbyteorder('<'))

@@ -20,7 +20,8 @@ PANDAS_VERSION = Version(pd.__version__)
 def test_write():
     self = create_autospec(PickleStore)
     version = {}
-    PickleStore.write(self, sentinel.arctic_lib, version, sentinel.symbol, 'item', sentinel.previous_version)
+    PickleStore.write(self, sentinel.arctic_lib, version, sentinel.symbol,
+                      'item', sentinel.previous_version)
     assert version['data'] == 'item'
 
 
@@ -33,10 +34,16 @@ def test_write_object():
 
     assert version['blob'] == '__chunked__V2'
     coll = arctic_lib.get_top_level_collection.return_value
-    assert coll.update_one.call_args_list == [call({'sha': checksum('sentinel.symbol', {'segment': 0, 'data': Binary(compress(cPickle.dumps(sentinel.item, cPickle.HIGHEST_PROTOCOL)))}),
-                                                    'symbol': 'sentinel.symbol'},
-                                                   {'$set': {'segment': 0, 'data': Binary(compress(cPickle.dumps(sentinel.item, cPickle.HIGHEST_PROTOCOL)), 0)},
-                                                    '$addToSet': {'parent': version['_id']}}, upsert=True)]
+    # Note: Use default cPickle.PROTOCOL which is 4.
+    assert coll.update_one.call_args_list == [call(
+        {'sha': checksum(
+            'sentinel.symbol',
+            {'segment': 0,
+             'data': Binary(compress(cPickle.dumps(sentinel.item)))}),
+         'symbol': 'sentinel.symbol'},
+        {'$set': {'segment': 0,
+                  'data': Binary(compress(cPickle.dumps(sentinel.item)), 0)},
+         '$addToSet': {'parent': version['_id']}}, upsert=True)]
 
 
 def test_read():

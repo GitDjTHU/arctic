@@ -11,8 +11,8 @@ Arctic is a high performance datastore for numeric data. It supports [Pandas](ht
 [numpy](http://www.numpy.org/) arrays and pickled objects out-of-the-box, with pluggable support for
 other data types and optional versioning.
 
-Arctic can query millions of rows per second per client, achieves ~10x compression on network bandwidth,
-~10x compression on disk, and scales to hundreds of millions of rows per second per
+Arctic can query millions of rows per second for each client, achieves ~10x compression on network bandwidth,
+~10x compression on disk, and scales to hundreds of millions of rows per second for each
 [MongoDB](https://www.mongodb.org/) instance.
 
 Arctic has been under active development at [Man AHL](http://www.ahl.com/) since 2012.
